@@ -11,6 +11,8 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -33,26 +35,32 @@ public final class SudokuView extends JFrame implements Observer {
 
     private final JButton[][] cellButtons;
     private final Set<Model.CellPosition> invalidCells;
+    private final JButton[] numberPadButtons;
     private JButton eraseButton;
     private JButton undoButton;
     private JButton hintButton;
     private JCheckBox validationCheckBox;
     private JCheckBox hintCheckBox;
     private JCheckBox randomCheckBox;
+    private JSpinner fixedPuzzleSpinner;
+    private JLabel fixedPuzzleLabel;
     private final JLabel statusLabel;
 
     private int selectedRow;
     private int selectedCol;
     private boolean syncingFlagControls;
+    private boolean syncingFixedPuzzleControl;
 
     public SudokuView(Model model) {
         super("Sudoku GUI");
         this.model = model;
         this.cellButtons = new JButton[Model.SIZE][Model.SIZE];
         this.invalidCells = new HashSet<Model.CellPosition>();
+        this.numberPadButtons = new JButton[9];
         this.selectedRow = 0;
         this.selectedCol = 0;
         this.syncingFlagControls = false;
+        this.syncingFixedPuzzleControl = false;
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(840, 720));
@@ -118,12 +126,32 @@ public final class SudokuView extends JFrame implements Observer {
         eraseButton.setEnabled(enabled);
     }
 
+    public void setNumberInputEnabled(boolean enabled) {
+        for (JButton button : numberPadButtons) {
+            button.setEnabled(enabled);
+        }
+    }
+
     public void syncFlagControls(boolean validationEnabled, boolean hintEnabled, boolean randomEnabled) {
         syncingFlagControls = true;
         validationCheckBox.setSelected(validationEnabled);
         hintCheckBox.setSelected(hintEnabled);
         randomCheckBox.setSelected(randomEnabled);
         syncingFlagControls = false;
+    }
+
+    public void syncFixedPuzzleControls(int puzzleCount, int fixedIndex, boolean randomEnabled) {
+        syncingFixedPuzzleControl = true;
+        SpinnerNumberModel spinnerModel = (SpinnerNumberModel) fixedPuzzleSpinner.getModel();
+        int max = Math.max(1, puzzleCount);
+        spinnerModel.setMinimum(1);
+        spinnerModel.setMaximum(max);
+        int displayValue = Math.min(Math.max(fixedIndex + 1, 1), max);
+        spinnerModel.setValue(displayValue);
+        boolean enabled = !randomEnabled;
+        fixedPuzzleSpinner.setEnabled(enabled);
+        fixedPuzzleLabel.setEnabled(enabled);
+        syncingFixedPuzzleControl = false;
     }
 
     public void showStatus(String text) {
@@ -217,12 +245,25 @@ public final class SudokuView extends JFrame implements Observer {
         validationCheckBox = new JCheckBox("Validation Feedback");
         hintCheckBox = new JCheckBox("Hint Enabled");
         randomCheckBox = new JCheckBox("Random Puzzle");
+        fixedPuzzleLabel = new JLabel("Fixed Puzzle #");
+        fixedPuzzleSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1, 1));
+        fixedPuzzleSpinner.addChangeListener(e -> {
+            if (controller == null || syncingFixedPuzzleControl) {
+                return;
+            }
+            Object value = fixedPuzzleSpinner.getValue();
+            if (value instanceof Integer) {
+                controller.onFixedPuzzleIndexChanged(((Integer) value).intValue() - 1);
+            }
+        });
         validationCheckBox.addActionListener(this::onFlagCheckboxChanged);
         hintCheckBox.addActionListener(this::onFlagCheckboxChanged);
         randomCheckBox.addActionListener(this::onFlagCheckboxChanged);
         flags.add(validationCheckBox);
         flags.add(hintCheckBox);
         flags.add(randomCheckBox);
+        flags.add(fixedPuzzleLabel);
+        flags.add(fixedPuzzleSpinner);
 
         JPanel numberPad = new JPanel(new GridLayout(3, 3, 4, 4));
         Font padFont = new Font(Font.SANS_SERIF, Font.PLAIN, 18);
@@ -236,6 +277,7 @@ public final class SudokuView extends JFrame implements Observer {
                 }
             });
             numberPad.add(key);
+            numberPadButtons[i - 1] = key;
         }
 
         JPanel wrapper = new JPanel(new BorderLayout(8, 8));
@@ -256,15 +298,15 @@ public final class SudokuView extends JFrame implements Observer {
     }
 
     private void onFlagCheckboxChanged(ActionEvent event) {
-        if (syncingFlagControls || controller == null) {
+        if (controller == null) {
             return;
         }
         Object source = event.getSource();
-        if (source == validationCheckBox) {
+        if (source == validationCheckBox && !syncingFlagControls) {
             controller.onValidationFeedbackToggled(validationCheckBox.isSelected());
-        } else if (source == hintCheckBox) {
+        } else if (source == hintCheckBox && !syncingFlagControls) {
             controller.onHintFlagToggled(hintCheckBox.isSelected());
-        } else if (source == randomCheckBox) {
+        } else if (source == randomCheckBox && !syncingFlagControls) {
             controller.onRandomSelectionToggled(randomCheckBox.isSelected());
         }
     }
@@ -343,7 +385,7 @@ public final class SudokuView extends JFrame implements Observer {
     }
 
     private void refreshBoard() {
-        SwingUtilities.invokeLater(() -> {
+        Runnable refreshTask = () -> {
             for (int row = 0; row < Model.SIZE; row++) {
                 for (int col = 0; col < Model.SIZE; col++) {
                     JButton button = cellButtons[row][col];
@@ -353,7 +395,12 @@ public final class SudokuView extends JFrame implements Observer {
                 }
             }
             repaint();
-        });
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            refreshTask.run();
+        } else {
+            SwingUtilities.invokeLater(refreshTask);
+        }
     }
 
     private void styleCell(JButton button, int row, int col, int value) {

@@ -38,8 +38,18 @@ public final class SudokuController {
             view.showStatus("Please select a cell first.");
             return;
         }
+        if (value < 1 || value > 9) {
+            view.showStatus("Only values 1-9 are allowed.");
+            return;
+        }
+        if (!model.isEditableCell(row, col)) {
+            view.showStatus("Selected cell is fixed and cannot be modified.");
+            return;
+        }
         if (!model.setCellValue(row, col, value)) {
             view.showStatus("Move rejected. You can only edit empty original cells with values 1-9.");
+        } else {
+            view.showStatus("Set (" + (row + 1) + ", " + (col + 1) + ") to " + value + ".");
         }
     }
 
@@ -52,12 +62,16 @@ public final class SudokuController {
         }
         if (!model.clearCell(row, col)) {
             view.showStatus("Erase rejected. Selected cell may be fixed or already empty.");
+        } else {
+            view.showStatus("Cleared (" + (row + 1) + ", " + (col + 1) + ").");
         }
     }
 
     public void onUndoRequested() {
         if (!model.undoLastAction()) {
             view.showStatus("Nothing to undo.");
+        } else {
+            view.showStatus("Undo completed.");
         }
     }
 
@@ -78,24 +92,38 @@ public final class SudokuController {
     public void onResetRequested() {
         completionShown = false;
         model.reset();
+        view.showStatus("Puzzle reset.");
     }
 
     public void onNewGameRequested() {
         completionShown = false;
         model.newGame();
         view.setSelectedCell(0, 0);
+        view.showStatus("New puzzle loaded.");
     }
 
     public void onValidationFeedbackToggled(boolean enabled) {
         model.setValidationFeedbackEnabled(enabled);
+        view.showStatus(enabled ? "Validation feedback enabled." : "Validation feedback disabled.");
     }
 
     public void onHintFlagToggled(boolean enabled) {
         model.setHintEnabled(enabled);
+        view.showStatus(enabled ? "Hint enabled." : "Hint disabled.");
     }
 
     public void onRandomSelectionToggled(boolean enabled) {
         model.setRandomPuzzleSelectionEnabled(enabled);
+        view.showStatus(enabled ? "Random puzzle selection enabled." : "Random puzzle selection disabled.");
+    }
+
+    public void onFixedPuzzleIndexChanged(int index) {
+        try {
+            model.setFixedPuzzleIndex(index);
+            view.showStatus("Fixed puzzle set to #" + (index + 1) + ". Click New Game to load it.");
+        } catch (IllegalArgumentException e) {
+            view.showStatus("Invalid fixed puzzle index.");
+        }
     }
 
     public void onModelChanged(Object ignoredChangeType) {
@@ -117,16 +145,23 @@ public final class SudokuController {
             view.clearInvalidCells();
         }
         view.setUndoEnabled(model.hasUndoableAction());
-        view.setHintButtonEnabled(model.isHintEnabled());
+        view.setHintButtonEnabled(model.isHintEnabled() && model.hasEditableEmptyCell());
         view.syncFlagControls(
                 model.isValidationFeedbackEnabled(),
                 model.isHintEnabled(),
                 model.isRandomPuzzleSelectionEnabled()
         );
+        view.syncFixedPuzzleControls(
+                model.getPuzzleCount(),
+                model.getFixedPuzzleIndex(),
+                model.isRandomPuzzleSelectionEnabled()
+        );
         int row = view.getSelectedRow();
         int col = view.getSelectedCol();
         boolean selected = row >= 0 && col >= 0;
-        boolean canErase = selected && model.isEditableCell(row, col) && model.getCellValue(row, col) != 0;
+        boolean editableSelected = selected && model.isEditableCell(row, col);
+        view.setNumberInputEnabled(editableSelected);
+        boolean canErase = editableSelected && model.getCellValue(row, col) != 0;
         view.setEraseEnabled(canErase);
     }
 

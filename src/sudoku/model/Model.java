@@ -315,6 +315,18 @@ public class Model extends Observable {
         return lastMove != null;
     }
 
+    public boolean hasEditableEmptyCell() {
+        ensureGameLoaded();
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (isEditableCell(row, col) && currentBoard[row][col] == 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void notifyChange(ChangeType changeType) {
         setChanged();
         notifyObservers(changeType);
