@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Observable;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 
@@ -112,15 +113,19 @@ public class Model extends Observable {
     private Move lastMove;
 
     public Model(String puzzleFilePath) throws IOException {
-        this(Paths.get(puzzleFilePath));
+        this(Paths.get(Objects.requireNonNull(puzzleFilePath, "Puzzle file path must not be null")));
     }
 
     public Model(Path puzzleFilePath) throws IOException {
+        assert puzzleFilePath != null : "Puzzle file path must not be null";
         loadPuzzles(puzzleFilePath);
         newGame();
+        assertModelInvariant();
     }
 
     public final void loadPuzzles(Path puzzleFilePath) throws IOException {
+        assert puzzleFilePath != null : "Puzzle file path must not be null";
+        assertModelInvariant();
         List<String> lines = Files.readAllLines(puzzleFilePath, StandardCharsets.UTF_8);
         List<int[][]> parsed = new ArrayList<int[][]>();
         for (String raw : lines) {
@@ -141,9 +146,12 @@ public class Model extends Observable {
         if (fixedPuzzleIndex >= puzzlePool.size()) {
             fixedPuzzleIndex = 0;
         }
+        assert !puzzlePool.isEmpty() : "Puzzle pool must not be empty after loading";
+        assertModelInvariant();
     }
 
     public void newGame() {
+        assertModelInvariant();
         assert !puzzlePool.isEmpty() : "Puzzle pool must not be empty";
         int index;
         if (randomPuzzleSelectionEnabled) {
@@ -160,16 +168,23 @@ public class Model extends Observable {
         }
         lastMove = null;
         notifyChange(ChangeType.NEW_GAME);
+        assertModelInvariant();
     }
 
     public void reset() {
+        assertModelInvariant();
         ensureGameLoaded();
         currentBoard = deepCopy(initialBoard);
         lastMove = null;
         notifyChange(ChangeType.RESET);
+        assertModelInvariant();
     }
 
     public boolean setCellValue(int row, int col, int value) {
+        assertModelInvariant();
+        assert row >= 0 && row < SIZE : "Row out of range";
+        assert col >= 0 && col < SIZE : "Column out of range";
+        assert value >= 1 && value <= 9 : "Value must be 1-9";
         if (!isInsideBoard(row, col) || !isEditableCell(row, col) || !isValue(value)) {
             return false;
         }
@@ -180,10 +195,15 @@ public class Model extends Observable {
         currentBoard[row][col] = value;
         lastMove = new Move(row, col, previous, value);
         notifyChange(ChangeType.CELL_UPDATED);
+        assert currentBoard[row][col] == value : "Cell should contain assigned value";
+        assertModelInvariant();
         return true;
     }
 
     public boolean clearCell(int row, int col) {
+        assertModelInvariant();
+        assert row >= 0 && row < SIZE : "Row out of range";
+        assert col >= 0 && col < SIZE : "Column out of range";
         if (!isInsideBoard(row, col) || !isEditableCell(row, col)) {
             return false;
         }
@@ -194,20 +214,25 @@ public class Model extends Observable {
         currentBoard[row][col] = 0;
         lastMove = new Move(row, col, previous, 0);
         notifyChange(ChangeType.CELL_UPDATED);
+        assert currentBoard[row][col] == 0 : "Cleared cell should be zero";
+        assertModelInvariant();
         return true;
     }
 
     public boolean undoLastAction() {
+        assertModelInvariant();
         if (lastMove == null) {
             return false;
         }
         currentBoard[lastMove.row][lastMove.col] = lastMove.previousValue;
         lastMove = null;
         notifyChange(ChangeType.UNDO);
+        assertModelInvariant();
         return true;
     }
 
     public Hint requestHint() {
+        assertModelInvariant();
         if (!hintEnabled) {
             return null;
         }
@@ -219,6 +244,7 @@ public class Model extends Observable {
                     currentBoard[row][col] = value;
                     lastMove = new Move(row, col, 0, value);
                     notifyChange(ChangeType.CELL_UPDATED);
+                    assertModelInvariant();
                     return new Hint(row, col, value);
                 }
             }
@@ -227,15 +253,19 @@ public class Model extends Observable {
     }
 
     public List<CellPosition> getInvalidCells() {
+        assertModelInvariant();
         ensureGameLoaded();
         Set<CellPosition> invalid = new LinkedHashSet<CellPosition>();
         collectRowDuplicates(invalid);
         collectColumnDuplicates(invalid);
         collectBoxDuplicates(invalid);
-        return new ArrayList<CellPosition>(invalid);
+        List<CellPosition> result = new ArrayList<CellPosition>(invalid);
+        assertModelInvariant();
+        return result;
     }
 
     public boolean isBoardCompleted() {
+        assertModelInvariant();
         ensureGameLoaded();
         for (int row = 0; row < SIZE; row++) {
             for (int col = 0; col < SIZE; col++) {
@@ -248,6 +278,7 @@ public class Model extends Observable {
     }
 
     public int getCellValue(int row, int col) {
+        assertModelInvariant();
         ensureGameLoaded();
         if (!isInsideBoard(row, col)) {
             throw new IllegalArgumentException("Cell out of range: (" + row + ", " + col + ")");
@@ -256,6 +287,7 @@ public class Model extends Observable {
     }
 
     public boolean isEditableCell(int row, int col) {
+        assertModelInvariant();
         ensureGameLoaded();
         if (!isInsideBoard(row, col)) {
             return false;
@@ -264,6 +296,7 @@ public class Model extends Observable {
     }
 
     public int[][] getBoardCopy() {
+        assertModelInvariant();
         ensureGameLoaded();
         return deepCopy(currentBoard);
     }
@@ -273,8 +306,10 @@ public class Model extends Observable {
     }
 
     public void setValidationFeedbackEnabled(boolean validationFeedbackEnabled) {
+        assertModelInvariant();
         this.validationFeedbackEnabled = validationFeedbackEnabled;
         notifyChange(ChangeType.FLAGS_UPDATED);
+        assertModelInvariant();
     }
 
     public boolean isHintEnabled() {
@@ -282,8 +317,10 @@ public class Model extends Observable {
     }
 
     public void setHintEnabled(boolean hintEnabled) {
+        assertModelInvariant();
         this.hintEnabled = hintEnabled;
         notifyChange(ChangeType.FLAGS_UPDATED);
+        assertModelInvariant();
     }
 
     public boolean isRandomPuzzleSelectionEnabled() {
@@ -291,8 +328,10 @@ public class Model extends Observable {
     }
 
     public void setRandomPuzzleSelectionEnabled(boolean randomPuzzleSelectionEnabled) {
+        assertModelInvariant();
         this.randomPuzzleSelectionEnabled = randomPuzzleSelectionEnabled;
         notifyChange(ChangeType.FLAGS_UPDATED);
+        assertModelInvariant();
     }
 
     public int getFixedPuzzleIndex() {
@@ -300,11 +339,14 @@ public class Model extends Observable {
     }
 
     public void setFixedPuzzleIndex(int fixedPuzzleIndex) {
+        assertModelInvariant();
         if (fixedPuzzleIndex < 0 || fixedPuzzleIndex >= puzzlePool.size()) {
             throw new IllegalArgumentException("Fixed puzzle index out of range: " + fixedPuzzleIndex);
         }
         this.fixedPuzzleIndex = fixedPuzzleIndex;
         notifyChange(ChangeType.FLAGS_UPDATED);
+        assert this.fixedPuzzleIndex == fixedPuzzleIndex : "Fixed index should be updated";
+        assertModelInvariant();
     }
 
     public int getPuzzleCount() {
@@ -316,6 +358,7 @@ public class Model extends Observable {
     }
 
     public boolean hasEditableEmptyCell() {
+        assertModelInvariant();
         ensureGameLoaded();
         for (int row = 0; row < SIZE; row++) {
             for (int col = 0; col < SIZE; col++) {
@@ -478,5 +521,106 @@ public class Model extends Observable {
         if (currentBoard == null || fixedCells == null || solvedBoard == null) {
             throw new IllegalStateException("Game has not been initialized");
         }
+    }
+
+    private void assertModelInvariant() {
+        assert puzzlePool != null : "Puzzle pool must exist";
+        if (puzzlePool.isEmpty()) {
+            assert initialBoard == null : "Initial board should be null before loading";
+            assert currentBoard == null : "Current board should be null before loading";
+            assert solvedBoard == null : "Solved board should be null before loading";
+            assert fixedCells == null : "Fixed cells should be null before loading";
+            assert lastMove == null : "No move should exist before loading";
+            return;
+        }
+        assert fixedPuzzleIndex >= 0 && fixedPuzzleIndex < puzzlePool.size() : "Fixed puzzle index out of range";
+        for (int[][] puzzle : puzzlePool) {
+            assert hasBoardShape(puzzle) : "Puzzle must be 9x9";
+            assert hasCellRange(puzzle, 0, 9) : "Puzzle values must be in [0, 9]";
+        }
+        if (initialBoard != null || currentBoard != null || solvedBoard != null || fixedCells != null) {
+            assert hasBoardShape(initialBoard) : "Initial board must be 9x9";
+            assert hasBoardShape(currentBoard) : "Current board must be 9x9";
+            assert hasBoardShape(solvedBoard) : "Solved board must be 9x9";
+            assert hasFixedShape(fixedCells) : "Fixed cells matrix must be 9x9";
+            assert hasCellRange(initialBoard, 0, 9) : "Initial board values must be in [0, 9]";
+            assert hasCellRange(currentBoard, 0, 9) : "Current board values must be in [0, 9]";
+            assert hasCellRange(solvedBoard, 1, 9) : "Solved board values must be in [1, 9]";
+            assert fixedCellsMatchInitial(initialBoard, fixedCells) : "Fixed markers must match initial board";
+            assert fixedCellsPreserved(initialBoard, currentBoard, fixedCells) : "Fixed cells cannot change";
+        }
+        if (lastMove != null) {
+            assert isInsideBoard(lastMove.row, lastMove.col) : "Last move row/col must be valid";
+            assert lastMove.previousValue >= 0 && lastMove.previousValue <= 9 : "Previous value range invalid";
+            assert lastMove.newValue >= 0 && lastMove.newValue <= 9 : "New value range invalid";
+        }
+    }
+
+    private static boolean hasBoardShape(int[][] board) {
+        if (board == null || board.length != SIZE) {
+            return false;
+        }
+        for (int row = 0; row < SIZE; row++) {
+            if (board[row] == null || board[row].length != SIZE) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasFixedShape(boolean[][] fixed) {
+        if (fixed == null || fixed.length != SIZE) {
+            return false;
+        }
+        for (int row = 0; row < SIZE; row++) {
+            if (fixed[row] == null || fixed[row].length != SIZE) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasCellRange(int[][] board, int min, int max) {
+        if (!hasBoardShape(board)) {
+            return false;
+        }
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                int value = board[row][col];
+                if (value < min || value > max) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean fixedCellsMatchInitial(int[][] initialBoard, boolean[][] fixedCells) {
+        if (!hasBoardShape(initialBoard) || !hasFixedShape(fixedCells)) {
+            return false;
+        }
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                boolean expectedFixed = initialBoard[row][col] != 0;
+                if (fixedCells[row][col] != expectedFixed) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean fixedCellsPreserved(int[][] initialBoard, int[][] currentBoard, boolean[][] fixedCells) {
+        if (!hasBoardShape(initialBoard) || !hasBoardShape(currentBoard) || !hasFixedShape(fixedCells)) {
+            return false;
+        }
+        for (int row = 0; row < SIZE; row++) {
+            for (int col = 0; col < SIZE; col++) {
+                if (fixedCells[row][col] && currentBoard[row][col] != initialBoard[row][col]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }
