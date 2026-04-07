@@ -26,8 +26,8 @@ public final class SudokuController {
     }
 
     public void onMoveSelection(int rowDelta, int colDelta) {
-        int nextRow = clamp(view.getSelectedRow() + rowDelta);
-        int nextCol = clamp(view.getSelectedCol() + colDelta);
+        int nextRow = wrap(view.getSelectedRow() + rowDelta);
+        int nextCol = wrap(view.getSelectedCol() + colDelta);
         onCellSelected(nextRow, nextCol);
     }
 
@@ -160,18 +160,28 @@ public final class SudokuController {
         int col = view.getSelectedCol();
         boolean selected = row >= 0 && col >= 0;
         boolean editableSelected = selected && model.isEditableCell(row, col);
+        view.showSelectionInfo(buildSelectionInfo(row, col, selected, editableSelected));
         view.setNumberInputEnabled(editableSelected);
         boolean canErase = editableSelected && model.getCellValue(row, col) != 0;
         view.setEraseEnabled(canErase);
     }
 
-    private static int clamp(int value) {
-        if (value < 0) {
-            return 0;
+    private String buildSelectionInfo(int row, int col, boolean selected, boolean editableSelected) {
+        if (!selected) {
+            return "Selected: -";
         }
-        if (value >= Model.SIZE) {
-            return Model.SIZE - 1;
+        int value = model.getCellValue(row, col);
+        String mode = editableSelected ? "editable" : "fixed";
+        String valueText = value == 0 ? "." : Integer.toString(value);
+        return "Selected: (" + (row + 1) + "," + (col + 1) + ") "
+                + mode + " value=" + valueText;
+    }
+
+    private static int wrap(int value) {
+        int result = value % Model.SIZE;
+        if (result < 0) {
+            result += Model.SIZE;
         }
-        return value;
+        return result;
     }
 }

@@ -45,6 +45,7 @@ public final class SudokuView extends JFrame implements Observer {
     private JSpinner fixedPuzzleSpinner;
     private JLabel fixedPuzzleLabel;
     private final JLabel statusLabel;
+    private JLabel selectionLabel;
 
     private int selectedRow;
     private int selectedCol;
@@ -158,6 +159,10 @@ public final class SudokuView extends JFrame implements Observer {
         statusLabel.setText(text);
     }
 
+    public void showSelectionInfo(String text) {
+        selectionLabel.setText(text);
+    }
+
     public void showCompletionMessage(String text) {
         JOptionPane.showMessageDialog(this, text, "Sudoku", JOptionPane.INFORMATION_MESSAGE);
         showStatus(text);
@@ -208,6 +213,11 @@ public final class SudokuView extends JFrame implements Observer {
         hintButton = new JButton("Hint");
         JButton resetButton = new JButton("Reset");
         JButton newGameButton = new JButton("New Game");
+        eraseButton.setToolTipText("Clear selected editable cell (Backspace/Delete)");
+        undoButton.setToolTipText("Undo last board action (U)");
+        hintButton.setToolTipText("Reveal one correct value (H)");
+        resetButton.setToolTipText("Reset current puzzle (R)");
+        newGameButton.setToolTipText("Load a new puzzle (N)");
 
         eraseButton.addActionListener(e -> {
             if (controller != null) {
@@ -245,8 +255,12 @@ public final class SudokuView extends JFrame implements Observer {
         validationCheckBox = new JCheckBox("Validation Feedback");
         hintCheckBox = new JCheckBox("Hint Enabled");
         randomCheckBox = new JCheckBox("Random Puzzle");
+        validationCheckBox.setToolTipText("Highlight duplicate conflicts");
+        hintCheckBox.setToolTipText("Enable or disable hint action");
+        randomCheckBox.setToolTipText("When off, New Game uses fixed puzzle index");
         fixedPuzzleLabel = new JLabel("Fixed Puzzle #");
         fixedPuzzleSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1, 1));
+        fixedPuzzleSpinner.setToolTipText("Used when Random Puzzle is off");
         fixedPuzzleSpinner.addChangeListener(e -> {
             if (controller == null || syncingFixedPuzzleControl) {
                 return;
@@ -270,6 +284,7 @@ public final class SudokuView extends JFrame implements Observer {
         for (int i = 1; i <= 9; i++) {
             JButton key = new JButton(String.valueOf(i));
             key.setFont(padFont);
+            key.setToolTipText("Input " + i);
             final int value = i;
             key.addActionListener(e -> {
                 if (controller != null) {
@@ -291,9 +306,11 @@ public final class SudokuView extends JFrame implements Observer {
     private JPanel createTopPanel() {
         JLabel title = new JLabel("Sudoku", SwingConstants.LEFT);
         title.setFont(new Font(Font.SERIF, Font.BOLD, 28));
+        selectionLabel = new JLabel("Selected: -");
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
         panel.add(title, BorderLayout.WEST);
+        panel.add(selectionLabel, BorderLayout.EAST);
         return panel;
     }
 
@@ -353,6 +370,36 @@ public final class SudokuView extends JFrame implements Observer {
         bindKey("DOWN", () -> {
             if (controller != null) {
                 controller.onMoveSelection(1, 0);
+            }
+        });
+        bindKey("A", () -> {
+            if (controller != null) {
+                controller.onMoveSelection(0, -1);
+            }
+        });
+        bindKey("D", () -> {
+            if (controller != null) {
+                controller.onMoveSelection(0, 1);
+            }
+        });
+        bindKey("W", () -> {
+            if (controller != null) {
+                controller.onMoveSelection(-1, 0);
+            }
+        });
+        bindKey("S", () -> {
+            if (controller != null) {
+                controller.onMoveSelection(1, 0);
+            }
+        });
+        bindKey("0", () -> {
+            if (controller != null) {
+                controller.onEraseRequested();
+            }
+        });
+        bindKey("NUMPAD0", () -> {
+            if (controller != null) {
+                controller.onEraseRequested();
             }
         });
         bindKey("H", () -> {

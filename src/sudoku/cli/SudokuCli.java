@@ -11,10 +11,12 @@ import java.util.Scanner;
 public final class SudokuCli {
     private final Model model;
     private final Scanner scanner;
+    private boolean completionShown;
 
     private SudokuCli(Model model) {
         this.model = model;
         this.scanner = new Scanner(System.in);
+        this.completionShown = false;
     }
 
     public static void main(String[] args) {
@@ -38,8 +40,12 @@ public final class SudokuCli {
         System.out.println("Type 'help' to see commands.");
         printBoard();
         while (true) {
-            if (model.isBoardCompleted()) {
+            boolean completed = model.isBoardCompleted();
+            if (completed && !completionShown) {
+                completionShown = true;
                 System.out.println("Puzzle completed! Congratulations.");
+            } else if (!completed) {
+                completionShown = false;
             }
             System.out.print("> ");
             if (!scanner.hasNextLine()) {
@@ -82,6 +88,12 @@ public final class SudokuCli {
                 return handleNew(tokens);
             case "status":
                 return handleStatus(tokens);
+            case "check":
+                return handleCheck(tokens);
+            case "flag":
+                return handleFlag(tokens);
+            case "fixed":
+                return handleFixed(tokens);
             case "quit":
             case "exit":
                 return handleExit(tokens);
@@ -102,9 +114,17 @@ public final class SudokuCli {
         if (row == null || col == null || value == null) {
             return true;
         }
+        if (!model.isEditableCell(row, col)) {
+            System.out.println("Move rejected. Selected cell is fixed.");
+            return true;
+        }
+        if (model.getCellValue(row, col) == value) {
+            System.out.println("Move ignored. Cell already has this value.");
+            return true;
+        }
         boolean changed = model.setCellValue(row, col, value);
         if (!changed) {
-            System.out.println("Move rejected. Cell may be fixed, out of range, or value is unchanged.");
+            System.out.println("Move rejected.");
             return true;
         }
         System.out.println("Cell (" + (row + 1) + ", " + (col + 1) + ") set to " + value + ".");
@@ -122,9 +142,17 @@ public final class SudokuCli {
         if (row == null || col == null) {
             return true;
         }
+        if (!model.isEditableCell(row, col)) {
+            System.out.println("Clear rejected. Selected cell is fixed.");
+            return true;
+        }
+        if (model.getCellValue(row, col) == 0) {
+            System.out.println("Clear ignored. Selected cell is already empty.");
+            return true;
+        }
         boolean changed = model.clearCell(row, col);
         if (!changed) {
-            System.out.println("Clear rejected. Cell may be fixed, out of range, or already empty.");
+            System.out.println("Clear rejected.");
             return true;
         }
         System.out.println("Cell (" + (row + 1) + ", " + (col + 1) + ") cleared.");
@@ -171,6 +199,7 @@ public final class SudokuCli {
             return true;
         }
         model.reset();
+        completionShown = false;
         System.out.println("Puzzle reset to initial state.");
         printBoard();
         return true;
@@ -182,6 +211,7 @@ public final class SudokuCli {
             return true;
         }
         model.newGame();
+        completionShown = false;
         System.out.println("New puzzle loaded.");
         printBoard();
         return true;
@@ -195,8 +225,83 @@ public final class SudokuCli {
         System.out.println("Validation feedback: " + model.isValidationFeedbackEnabled());
         System.out.println("Hint enabled: " + model.isHintEnabled());
         System.out.println("Random puzzle selection: " + model.isRandomPuzzleSelectionEnabled());
+        System.out.println("Fixed puzzle index: " + (model.getFixedPuzzleIndex() + 1) + "/" + model.getPuzzleCount());
+        System.out.println("Has editable empty cell: " + model.hasEditableEmptyCell());
         System.out.println("Undo available: " + model.hasUndoableAction());
         System.out.println("Completed: " + model.isBoardCompleted());
+        return true;
+    }
+
+    private boolean handleCheck(String[] tokens) {
+        if (tokens.length != 1) {
+            System.out.println("Usage: check");
+            return true;
+        }
+        List<Model.CellPosition> invalid = model.getInvalidCells();
+        if (invalid.isEmpty()) {
+            System.out.println("Board currently has no duplicate conflicts.");
+        } else {
+            System.out.println("Board has duplicate conflicts:");
+            printInvalidCells();
+        }
+        return true;
+    }
+
+    private boolean handleFlag(String[] tokens) {
+        if (tokens.length == 1) {
+            System.out.println("Flags:");
+            System.out.println("  validation = " + model.isValidationFeedbackEnabled());
+            System.out.println("  hint       = " + model.isHintEnabled());
+            System.out.println("  random     = " + model.isRandomPuzzleSelectionEnabled());
+            return true;
+        }
+        if (tokens.length != 3) {
+            System.out.println("Usage: flag <validation|hint|random> <on|off>");
+            return true;
+        }
+        String name = tokens[1].toLowerCase();
+        Boolean enabled = parseOnOff(tokens[2]);
+        if (enabled == null) {
+            System.out.println("Flag value must be 'on' or 'off'.");
+            return true;
+        }
+        switch (name) {
+            case "validation":
+                model.setValidationFeedbackEnabled(enabled);
+                System.out.println("Validation feedback set to " + enabled + ".");
+                if (enabled) {
+                    printInvalidCells();
+                }
+                return true;
+            case "hint":
+                model.setHintEnabled(enabled);
+                System.out.println("Hint flag set to " + enabled + ".");
+                return true;
+            case "random":
+                model.setRandomPuzzleSelectionEnabled(enabled);
+                System.out.println("Random puzzle selection set to " + enabled + ".");
+                return true;
+            default:
+                System.out.println("Unknown flag. Use validation, hint, or random.");
+                return true;
+        }
+    }
+
+    private boolean handleFixed(String[] tokens) {
+        if (tokens.length != 2) {
+            System.out.println("Usage: fixed <index 1-" + model.getPuzzleCount() + ">");
+            return true;
+        }
+        Integer index = parseInt(tokens[1], "Fixed index");
+        if (index == null) {
+            return true;
+        }
+        if (index < 1 || index > model.getPuzzleCount()) {
+            System.out.println("Fixed index must be between 1 and " + model.getPuzzleCount() + ".");
+            return true;
+        }
+        model.setFixedPuzzleIndex(index - 1);
+        System.out.println("Fixed puzzle index set to " + index + ". Use 'new' to load it.");
         return true;
     }
 
@@ -276,6 +381,10 @@ public final class SudokuCli {
         System.out.println("  reset                        Restore the puzzle to initial state");
         System.out.println("  new                          Start a new puzzle");
         System.out.println("  status                       Show current model flags and state");
+        System.out.println("  check                        Show current duplicate conflicts");
+        System.out.println("  flag                         Show all flag values");
+        System.out.println("  flag <name> <on|off>         Set flag (validation/hint/random)");
+        System.out.println("  fixed <index>                Set fixed puzzle index for random=off");
         System.out.println("  help                         Show this help");
         System.out.println("  exit                         Quit the program");
     }
@@ -311,5 +420,16 @@ public final class SudokuCli {
             System.out.println(label + " must be an integer.");
             return null;
         }
+    }
+
+    private Boolean parseOnOff(String text) {
+        String normalized = text.toLowerCase();
+        if ("on".equals(normalized)) {
+            return Boolean.TRUE;
+        }
+        if ("off".equals(normalized)) {
+            return Boolean.FALSE;
+        }
+        return null;
     }
 }
