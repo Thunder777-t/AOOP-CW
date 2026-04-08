@@ -1,0 +1,114 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+
+title Sudoku Coursework Class Diagram
+
+class Model {
+  +Model(Path puzzleFilePath)
+  +newGame()
+  +reset()
+  +setCellValue(row, col, value): boolean
+  +clearCell(row, col): boolean
+  +undoLastAction(): boolean
+  +requestHint(): Hint
+  +getInvalidCells(): List<CellPosition>
+  +isBoardCompleted(): boolean
+  +getCellValue(row, col): int
+  +isEditableCell(row, col): boolean
+  +getBoardCopy(): int[][]
+  +setValidationFeedbackEnabled(enabled)
+  +setHintEnabled(enabled)
+  +setRandomPuzzleSelectionEnabled(enabled)
+  +setFixedPuzzleIndex(index)
+  +hasUndoableAction(): boolean
+  +hasEditableEmptyCell(): boolean
+}
+
+class "Model.CellPosition" as CellPosition {
+  +getRow(): int
+  +getCol(): int
+}
+
+class "Model.Hint" as Hint {
+  +getRow(): int
+  +getCol(): int
+  +getValue(): int
+}
+
+class SudokuController {
+  +onCellSelected(row, col)
+  +onMoveSelection(rowDelta, colDelta)
+  +onNumberEntered(value)
+  +onEraseRequested()
+  +onUndoRequested()
+  +onHintRequested()
+  +onResetRequested()
+  +onNewGameRequested()
+  +onValidationFeedbackToggled(enabled)
+  +onHintFlagToggled(enabled)
+  +onRandomSelectionToggled(enabled)
+  +onFixedPuzzleIndexChanged(index)
+  +onModelChanged(change)
+}
+
+class SudokuView {
+  +setController(controller)
+  +setSelectedCell(row, col)
+  +setInvalidCells(cells)
+  +clearInvalidCells()
+  +setUndoEnabled(enabled)
+  +setHintButtonEnabled(enabled)
+  +setEraseEnabled(enabled)
+  +setNumberInputEnabled(enabled)
+  +syncFlagControls(validation, hint, random)
+  +syncFixedPuzzleControls(count, index, randomEnabled)
+  +showStatus(text)
+  +showSelectionInfo(text)
+  +showCompletionMessage(text)
+  +update(o, arg)
+}
+
+class SudokuGuiMain {
+  +main(args)
+}
+
+class SudokuCli {
+  +main(args)
+}
+
+class Observable
+class Observer
+class JFrame
+
+Model --|> Observable
+SudokuView ..|> Observer
+SudokuView --|> JFrame
+
+Model *-- CellPosition
+Model *-- Hint
+
+SudokuController --> Model : calls model operations
+SudokuController --> SudokuView : updates view state
+SudokuView --> SudokuController : forwards UI input
+SudokuView --> Model : reads board state
+
+SudokuGuiMain ..> Model : instantiate
+SudokuGuiMain ..> SudokuView : instantiate
+SudokuGuiMain ..> SudokuController : wire MVC
+
+SudokuCli --> Model : reuse same model
+
+note right of SudokuController
+  Controller has no Swing rendering logic.
+  It validates user intentions and coordinates
+  Model <-> View state updates.
+end note
+
+note right of Model
+  Model contains puzzle loading, Sudoku rules,
+  flags, completion detection, and no UI code.
+end note
+
+@enduml
