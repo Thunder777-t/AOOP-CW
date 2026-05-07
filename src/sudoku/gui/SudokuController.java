@@ -126,8 +126,15 @@ public final class SudokuController {
         }
     }
 
-    public void onModelChanged(Object ignoredChangeType) {
+    public void onModelChanged(Object rawChangeType) {
         syncViewState();
+        Model.ChangeType changeType = rawChangeType instanceof Model.ChangeType
+                ? (Model.ChangeType) rawChangeType
+                : null;
+        if (changeType == Model.ChangeType.NEW_GAME || changeType == Model.ChangeType.RESET) {
+            completionShown = model.isBoardCompleted();
+            return;
+        }
         boolean completed = model.isBoardCompleted();
         if (completed && !completionShown) {
             completionShown = true;

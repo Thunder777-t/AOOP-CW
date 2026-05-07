@@ -49,6 +49,9 @@ class ModelTest {
     void hintUndoResetAndPuzzleSelection_shouldRespectFlagsAndState() throws IOException {
         // Scenario: verify hint flag behavior, undo/reset lifecycle, and fixed-puzzle selection behavior.
         Model model = createModel(PUZZLE_B, PUZZLE_C);
+        model.setRandomPuzzleSelectionEnabled(false);
+        model.setFixedPuzzleIndex(0);
+        model.newGame();
 
         model.setHintEnabled(false);
         assertNull(model.requestHint(), "Hint disabled should return null");

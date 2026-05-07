@@ -6,76 +6,150 @@ skinparam monochrome true
 title Sudoku Coursework Class Diagram
 
 class Model {
-  +Model(Path puzzleFilePath)
+  +{static} SIZE: int
+  -{static} BOX_SIZE: int
+  -random: Random
+  -puzzlePool: List<int[][]>
+  -validationFeedbackEnabled: boolean
+  -hintEnabled: boolean
+  -randomPuzzleSelectionEnabled: boolean
+  -fixedPuzzleIndex: int
+  -initialBoard: int[][]
+  -currentBoard: int[][]
+  -solvedBoard: int[][]
+  -fixedCells: boolean[][]
+  -lastMove: Move
+  +Model(puzzleFilePath: String)
+  +Model(puzzleFilePath: Path)
+  +loadPuzzles(puzzleFilePath: Path)
   +newGame()
   +reset()
-  +setCellValue(row, col, value): boolean
-  +clearCell(row, col): boolean
+  +setCellValue(row: int, col: int, value: int): boolean
+  +clearCell(row: int, col: int): boolean
   +undoLastAction(): boolean
   +requestHint(): Hint
   +getInvalidCells(): List<CellPosition>
   +isBoardCompleted(): boolean
-  +getCellValue(row, col): int
-  +isEditableCell(row, col): boolean
+  +getCellValue(row: int, col: int): int
+  +isEditableCell(row: int, col: int): boolean
   +getBoardCopy(): int[][]
-  +setValidationFeedbackEnabled(enabled)
-  +setHintEnabled(enabled)
-  +setRandomPuzzleSelectionEnabled(enabled)
-  +setFixedPuzzleIndex(index)
+  +isValidationFeedbackEnabled(): boolean
+  +setValidationFeedbackEnabled(enabled: boolean)
+  +isHintEnabled(): boolean
+  +setHintEnabled(enabled: boolean)
+  +isRandomPuzzleSelectionEnabled(): boolean
+  +setRandomPuzzleSelectionEnabled(enabled: boolean)
+  +getFixedPuzzleIndex(): int
+  +setFixedPuzzleIndex(index: int)
+  +getPuzzleCount(): int
   +hasUndoableAction(): boolean
   +hasEditableEmptyCell(): boolean
+  -notifyChange(changeType: ChangeType)
+}
+
+enum ChangeType {
+  NEW_GAME
+  RESET
+  CELL_UPDATED
+  UNDO
+  FLAGS_UPDATED
 }
 
 class "Model.CellPosition" as CellPosition {
+  -row: int
+  -col: int
+  +CellPosition(row: int, col: int)
   +getRow(): int
   +getCol(): int
+  +equals(other: Object): boolean
+  +hashCode(): int
 }
 
 class "Model.Hint" as Hint {
+  -row: int
+  -col: int
+  -value: int
+  +Hint(row: int, col: int, value: int)
   +getRow(): int
   +getCol(): int
   +getValue(): int
 }
 
+class "Model.Move" as Move {
+  -row: int
+  -col: int
+  -previousValue: int
+  -newValue: int
+}
+
 class SudokuController {
-  +onCellSelected(row, col)
-  +onMoveSelection(rowDelta, colDelta)
-  +onNumberEntered(value)
+  -model: Model
+  -view: SudokuView
+  -completionShown: boolean
+  +SudokuController(model: Model, view: SudokuView)
+  +onCellSelected(row: int, col: int)
+  +onMoveSelection(rowDelta: int, colDelta: int)
+  +onNumberEntered(value: int)
   +onEraseRequested()
   +onUndoRequested()
   +onHintRequested()
   +onResetRequested()
   +onNewGameRequested()
-  +onValidationFeedbackToggled(enabled)
-  +onHintFlagToggled(enabled)
-  +onRandomSelectionToggled(enabled)
-  +onFixedPuzzleIndexChanged(index)
-  +onModelChanged(change)
+  +onValidationFeedbackToggled(enabled: boolean)
+  +onHintFlagToggled(enabled: boolean)
+  +onRandomSelectionToggled(enabled: boolean)
+  +onFixedPuzzleIndexChanged(index: int)
+  +onModelChanged(change: Object)
 }
 
 class SudokuView {
-  +setController(controller)
-  +setSelectedCell(row, col)
-  +setInvalidCells(cells)
+  -model: Model
+  -controller: SudokuController
+  -cellButtons: JButton[][]
+  -invalidCells: Set<CellPosition>
+  -numberPadButtons: JButton[]
+  -eraseButton: JButton
+  -undoButton: JButton
+  -hintButton: JButton
+  -validationCheckBox: JCheckBox
+  -hintCheckBox: JCheckBox
+  -randomCheckBox: JCheckBox
+  -fixedPuzzleSpinner: JSpinner
+  -fixedPuzzleLabel: JLabel
+  -statusLabel: JLabel
+  -selectionLabel: JLabel
+  -selectedRow: int
+  -selectedCol: int
+  -syncingFlagControls: boolean
+  -syncingFixedPuzzleControl: boolean
+  +SudokuView(model: Model)
+  +setController(controller: SudokuController)
+  +getSelectedRow(): int
+  +getSelectedCol(): int
+  +setSelectedCell(row: int, col: int)
+  +setInvalidCells(cells: List<CellPosition>)
   +clearInvalidCells()
-  +setUndoEnabled(enabled)
-  +setHintButtonEnabled(enabled)
-  +setEraseEnabled(enabled)
-  +setNumberInputEnabled(enabled)
-  +syncFlagControls(validation, hint, random)
-  +syncFixedPuzzleControls(count, index, randomEnabled)
-  +showStatus(text)
-  +showSelectionInfo(text)
-  +showCompletionMessage(text)
-  +update(o, arg)
+  +setUndoEnabled(enabled: boolean)
+  +setHintButtonEnabled(enabled: boolean)
+  +setEraseEnabled(enabled: boolean)
+  +setNumberInputEnabled(enabled: boolean)
+  +syncFlagControls(validation: boolean, hint: boolean, random: boolean)
+  +syncFixedPuzzleControls(count: int, index: int, randomEnabled: boolean)
+  +showStatus(text: String)
+  +showSelectionInfo(text: String)
+  +showCompletionMessage(text: String)
+  +update(o: Observable, arg: Object)
 }
 
 class SudokuGuiMain {
-  +main(args)
+  +main(args: String[])
 }
 
 class SudokuCli {
-  +main(args)
+  -model: Model
+  -scanner: Scanner
+  -completionShown: boolean
+  +main(args: String[])
 }
 
 class Observable
@@ -86,8 +160,10 @@ Model --|> Observable
 SudokuView ..|> Observer
 SudokuView --|> JFrame
 
+Model *-- ChangeType
 Model *-- CellPosition
 Model *-- Hint
+Model *-- Move
 
 SudokuController --> Model : calls model operations
 SudokuController --> SudokuView : updates view state
@@ -97,18 +173,17 @@ SudokuView --> Model : reads board state
 SudokuGuiMain ..> Model : instantiate
 SudokuGuiMain ..> SudokuView : instantiate
 SudokuGuiMain ..> SudokuController : wire MVC
-
 SudokuCli --> Model : reuse same model
 
 note right of SudokuController
-  Controller has no Swing rendering logic.
-  It validates user intentions and coordinates
-  Model <-> View state updates.
+  Controller contains no Swing rendering code.
+  It validates requests and coordinates model/view.
 end note
 
 note right of Model
-  Model contains puzzle loading, Sudoku rules,
-  flags, completion detection, and no UI code.
+  Model contains Sudoku rules, puzzle loading,
+  flags, undo, hint, and completion logic.
+  It contains no GUI code.
 end note
 
 @enduml

@@ -269,7 +269,24 @@ public class Model extends Observable {
         ensureGameLoaded();
         for (int row = 0; row < SIZE; row++) {
             for (int col = 0; col < SIZE; col++) {
-                if (currentBoard[row][col] != solvedBoard[row][col]) {
+                if (!isValue(currentBoard[row][col])) {
+                    return false;
+                }
+            }
+        }
+        for (int row = 0; row < SIZE; row++) {
+            if (!isCompleteRow(row)) {
+                return false;
+            }
+        }
+        for (int col = 0; col < SIZE; col++) {
+            if (!isCompleteColumn(col)) {
+                return false;
+            }
+        }
+        for (int boxRow = 0; boxRow < SIZE; boxRow += BOX_SIZE) {
+            for (int boxCol = 0; boxCol < SIZE; boxCol += BOX_SIZE) {
+                if (!isCompleteBox(boxRow, boxCol)) {
                     return false;
                 }
             }
@@ -515,6 +532,44 @@ public class Model extends Observable {
 
     private static boolean isValue(int value) {
         return value >= 1 && value <= 9;
+    }
+
+    private boolean isCompleteRow(int row) {
+        boolean[] seen = new boolean[SIZE + 1];
+        for (int col = 0; col < SIZE; col++) {
+            int value = currentBoard[row][col];
+            if (seen[value]) {
+                return false;
+            }
+            seen[value] = true;
+        }
+        return true;
+    }
+
+    private boolean isCompleteColumn(int col) {
+        boolean[] seen = new boolean[SIZE + 1];
+        for (int row = 0; row < SIZE; row++) {
+            int value = currentBoard[row][col];
+            if (seen[value]) {
+                return false;
+            }
+            seen[value] = true;
+        }
+        return true;
+    }
+
+    private boolean isCompleteBox(int startRow, int startCol) {
+        boolean[] seen = new boolean[SIZE + 1];
+        for (int row = startRow; row < startRow + BOX_SIZE; row++) {
+            for (int col = startCol; col < startCol + BOX_SIZE; col++) {
+                int value = currentBoard[row][col];
+                if (seen[value]) {
+                    return false;
+                }
+                seen[value] = true;
+            }
+        }
+        return true;
     }
 
     private void ensureGameLoaded() {

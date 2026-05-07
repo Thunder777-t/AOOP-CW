@@ -199,7 +199,7 @@ public final class SudokuCli {
             return true;
         }
         model.reset();
-        completionShown = false;
+        completionShown = model.isBoardCompleted();
         System.out.println("Puzzle reset to initial state.");
         printBoard();
         return true;
@@ -211,7 +211,7 @@ public final class SudokuCli {
             return true;
         }
         model.newGame();
-        completionShown = false;
+        completionShown = model.isBoardCompleted();
         System.out.println("New puzzle loaded.");
         printBoard();
         return true;
