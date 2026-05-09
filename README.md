@@ -7,7 +7,8 @@ This project implements two Java versions of Sudoku that share the same `Model`:
 
 ## Project Layout
 
-- `src/sudoku/model/Model.java`: shared game logic, puzzle loading, validation, hint/undo/reset/new game, flags.
+- `src/sudoku/model/SudokuModel.java`: shared model interface depended on by GUI and CLI.
+- `src/sudoku/model/Model.java`: concrete model implementation (rules, puzzle loading, validation, hint/undo/reset/new game, flags).
 - `src/sudoku/gui/*`: GUI `View` + `Controller` + `Main`.
 - `src/sudoku/cli/SudokuCli.java`: command-line program using the same model.
 - `test/sudoku/model/ModelTest.java`: three JUnit scenarios focused on the model.

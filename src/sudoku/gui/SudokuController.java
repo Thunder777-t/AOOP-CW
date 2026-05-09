@@ -1,15 +1,18 @@
 package sudoku.gui;
 
-import sudoku.model.Model;
+import sudoku.model.SudokuModel;
+import sudoku.model.SudokuModel.CellPosition;
+import sudoku.model.SudokuModel.ChangeType;
+import sudoku.model.SudokuModel.Hint;
 
 import java.util.List;
 
 public final class SudokuController {
-    private final Model model;
+    private final SudokuModel model;
     private final SudokuView view;
     private boolean completionShown;
 
-    public SudokuController(Model model, SudokuView view) {
+    public SudokuController(SudokuModel model, SudokuView view) {
         this.model = model;
         this.view = view;
         this.completionShown = false;
@@ -18,7 +21,7 @@ public final class SudokuController {
     }
 
     public void onCellSelected(int row, int col) {
-        if (row < 0 || row >= Model.SIZE || col < 0 || col >= Model.SIZE) {
+        if (row < 0 || row >= SudokuModel.SIZE || col < 0 || col >= SudokuModel.SIZE) {
             return;
         }
         view.setSelectedCell(row, col);
@@ -76,7 +79,7 @@ public final class SudokuController {
     }
 
     public void onHintRequested() {
-        Model.Hint hint = model.requestHint();
+        Hint hint = model.requestHint();
         if (hint == null) {
             if (!model.isHintEnabled()) {
                 view.showStatus("Hint is disabled.");
@@ -128,10 +131,10 @@ public final class SudokuController {
 
     public void onModelChanged(Object rawChangeType) {
         syncViewState();
-        Model.ChangeType changeType = rawChangeType instanceof Model.ChangeType
-                ? (Model.ChangeType) rawChangeType
+        ChangeType changeType = rawChangeType instanceof ChangeType
+                ? (ChangeType) rawChangeType
                 : null;
-        if (changeType == Model.ChangeType.NEW_GAME || changeType == Model.ChangeType.RESET) {
+        if (changeType == ChangeType.NEW_GAME || changeType == ChangeType.RESET) {
             completionShown = model.isBoardCompleted();
             return;
         }
@@ -146,7 +149,7 @@ public final class SudokuController {
 
     private void syncViewState() {
         if (model.isValidationFeedbackEnabled()) {
-            List<Model.CellPosition> invalidCells = model.getInvalidCells();
+            List<CellPosition> invalidCells = model.getInvalidCells();
             view.setInvalidCells(invalidCells);
         } else {
             view.clearInvalidCells();
@@ -185,9 +188,9 @@ public final class SudokuController {
     }
 
     private static int wrap(int value) {
-        int result = value % Model.SIZE;
+        int result = value % SudokuModel.SIZE;
         if (result < 0) {
-            result += Model.SIZE;
+            result += SudokuModel.SIZE;
         }
         return result;
     }

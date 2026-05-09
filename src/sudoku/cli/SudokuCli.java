@@ -1,6 +1,9 @@
 package sudoku.cli;
 
 import sudoku.model.Model;
+import sudoku.model.SudokuModel;
+import sudoku.model.SudokuModel.CellPosition;
+import sudoku.model.SudokuModel.Hint;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -9,11 +12,11 @@ import java.util.List;
 import java.util.Scanner;
 
 public final class SudokuCli {
-    private final Model model;
+    private final SudokuModel model;
     private final Scanner scanner;
     private boolean completionShown;
 
-    private SudokuCli(Model model) {
+    private SudokuCli(SudokuModel model) {
         this.model = model;
         this.scanner = new Scanner(System.in);
         this.completionShown = false;
@@ -22,7 +25,7 @@ public final class SudokuCli {
     public static void main(String[] args) {
         Path puzzlePath = args.length > 0 ? Paths.get(args[0]) : Paths.get("puzzles.txt");
         try {
-            Model model = new Model(puzzlePath);
+            SudokuModel model = new Model(puzzlePath);
             SudokuCli cli = new SudokuCli(model);
             cli.run();
         } catch (IOException e) {
@@ -179,7 +182,7 @@ public final class SudokuCli {
             System.out.println("Usage: hint");
             return true;
         }
-        Model.Hint hint = model.requestHint();
+        Hint hint = model.requestHint();
         if (hint == null) {
             if (!model.isHintEnabled()) {
                 System.out.println("Hint is currently disabled.");
@@ -237,7 +240,7 @@ public final class SudokuCli {
             System.out.println("Usage: check");
             return true;
         }
-        List<Model.CellPosition> invalid = model.getInvalidCells();
+        List<CellPosition> invalid = model.getInvalidCells();
         if (invalid.isEmpty()) {
             System.out.println("Board currently has no duplicate conflicts.");
         } else {
@@ -322,14 +325,14 @@ public final class SudokuCli {
     }
 
     private void printInvalidCells() {
-        List<Model.CellPosition> invalid = model.getInvalidCells();
+        List<CellPosition> invalid = model.getInvalidCells();
         if (invalid.isEmpty()) {
             return;
         }
         StringBuilder builder = new StringBuilder();
         builder.append("Invalid cells: ");
         for (int i = 0; i < invalid.size(); i++) {
-            Model.CellPosition cell = invalid.get(i);
+            CellPosition cell = invalid.get(i);
             if (i > 0) {
                 builder.append(", ");
             }
@@ -350,13 +353,13 @@ public final class SudokuCli {
         int[][] board = model.getBoardCopy();
         System.out.println();
         System.out.println("    1 2 3   4 5 6   7 8 9");
-        for (int row = 0; row < Model.SIZE; row++) {
+        for (int row = 0; row < SudokuModel.SIZE; row++) {
             if (row % 3 == 0) {
                 System.out.println("  +-------+-------+-------+");
             }
             StringBuilder line = new StringBuilder();
             line.append(row + 1).append(" | ");
-            for (int col = 0; col < Model.SIZE; col++) {
+            for (int col = 0; col < SudokuModel.SIZE; col++) {
                 int value = board[row][col];
                 line.append(value == 0 ? "." : Integer.toString(value));
                 if (col % 3 == 2) {

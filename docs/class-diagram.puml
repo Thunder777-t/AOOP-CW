@@ -5,22 +5,10 @@ skinparam monochrome true
 
 title Sudoku Coursework Class Diagram
 
-class Model {
+interface SudokuModel {
   +{static} SIZE: int
-  -{static} BOX_SIZE: int
-  -random: Random
-  -puzzlePool: List<int[][]>
-  -validationFeedbackEnabled: boolean
-  -hintEnabled: boolean
-  -randomPuzzleSelectionEnabled: boolean
-  -fixedPuzzleIndex: int
-  -initialBoard: int[][]
-  -currentBoard: int[][]
-  -solvedBoard: int[][]
-  -fixedCells: boolean[][]
-  -lastMove: Move
-  +Model(puzzleFilePath: String)
-  +Model(puzzleFilePath: Path)
+  +addObserver(observer: Observer)
+  +deleteObserver(observer: Observer)
   +loadPuzzles(puzzleFilePath: Path)
   +newGame()
   +reset()
@@ -44,10 +32,27 @@ class Model {
   +getPuzzleCount(): int
   +hasUndoableAction(): boolean
   +hasEditableEmptyCell(): boolean
-  -notifyChange(changeType: ChangeType)
 }
 
-enum ChangeType {
+class Model {
+  +{static} SIZE: int
+  -{static} BOX_SIZE: int
+  -random: Random
+  -puzzlePool: List<int[][]>
+  -validationFeedbackEnabled: boolean
+  -hintEnabled: boolean
+  -randomPuzzleSelectionEnabled: boolean
+  -fixedPuzzleIndex: int
+  -initialBoard: int[][]
+  -currentBoard: int[][]
+  -solvedBoard: int[][]
+  -fixedCells: boolean[][]
+  -lastMove: Move
+  +Model(puzzleFilePath: String)
+  +Model(puzzleFilePath: Path)
+}
+
+enum "SudokuModel.ChangeType" as ChangeType {
   NEW_GAME
   RESET
   CELL_UPDATED
@@ -55,7 +60,7 @@ enum ChangeType {
   FLAGS_UPDATED
 }
 
-class "Model.CellPosition" as CellPosition {
+class "SudokuModel.CellPosition" as CellPosition {
   -row: int
   -col: int
   +CellPosition(row: int, col: int)
@@ -65,7 +70,7 @@ class "Model.CellPosition" as CellPosition {
   +hashCode(): int
 }
 
-class "Model.Hint" as Hint {
+class "SudokuModel.Hint" as Hint {
   -row: int
   -col: int
   -value: int
@@ -83,27 +88,14 @@ class "Model.Move" as Move {
 }
 
 class SudokuController {
-  -model: Model
+  -model: SudokuModel
   -view: SudokuView
   -completionShown: boolean
-  +SudokuController(model: Model, view: SudokuView)
-  +onCellSelected(row: int, col: int)
-  +onMoveSelection(rowDelta: int, colDelta: int)
-  +onNumberEntered(value: int)
-  +onEraseRequested()
-  +onUndoRequested()
-  +onHintRequested()
-  +onResetRequested()
-  +onNewGameRequested()
-  +onValidationFeedbackToggled(enabled: boolean)
-  +onHintFlagToggled(enabled: boolean)
-  +onRandomSelectionToggled(enabled: boolean)
-  +onFixedPuzzleIndexChanged(index: int)
-  +onModelChanged(change: Object)
+  +SudokuController(model: SudokuModel, view: SudokuView)
 }
 
 class SudokuView {
-  -model: Model
+  -model: SudokuModel
   -controller: SudokuController
   -cellButtons: JButton[][]
   -invalidCells: Set<CellPosition>
@@ -122,22 +114,7 @@ class SudokuView {
   -selectedCol: int
   -syncingFlagControls: boolean
   -syncingFixedPuzzleControl: boolean
-  +SudokuView(model: Model)
-  +setController(controller: SudokuController)
-  +getSelectedRow(): int
-  +getSelectedCol(): int
-  +setSelectedCell(row: int, col: int)
-  +setInvalidCells(cells: List<CellPosition>)
-  +clearInvalidCells()
-  +setUndoEnabled(enabled: boolean)
-  +setHintButtonEnabled(enabled: boolean)
-  +setEraseEnabled(enabled: boolean)
-  +setNumberInputEnabled(enabled: boolean)
-  +syncFlagControls(validation: boolean, hint: boolean, random: boolean)
-  +syncFixedPuzzleControls(count: int, index: int, randomEnabled: boolean)
-  +showStatus(text: String)
-  +showSelectionInfo(text: String)
-  +showCompletionMessage(text: String)
+  +SudokuView(model: SudokuModel)
   +update(o: Observable, arg: Object)
 }
 
@@ -146,7 +123,7 @@ class SudokuGuiMain {
 }
 
 class SudokuCli {
-  -model: Model
+  -model: SudokuModel
   -scanner: Scanner
   -completionShown: boolean
   +main(args: String[])
@@ -156,24 +133,25 @@ class Observable
 class Observer
 class JFrame
 
+Model ..|> SudokuModel
 Model --|> Observable
 SudokuView ..|> Observer
 SudokuView --|> JFrame
 
-Model *-- ChangeType
-Model *-- CellPosition
-Model *-- Hint
-Model *-- Move
+SudokuModel +-- ChangeType
+SudokuModel +-- CellPosition
+SudokuModel +-- Hint
+Model "1" *-- "0..1" Move
 
-SudokuController --> Model : calls model operations
-SudokuController --> SudokuView : updates view state
-SudokuView --> SudokuController : forwards UI input
-SudokuView --> Model : reads board state
+SudokuController "1" --> "1" SudokuModel : calls model operations
+SudokuController "1" --> "1" SudokuView : updates view state
+SudokuView "1" --> "1" SudokuController : forwards UI input
+SudokuView "1" --> "1" SudokuModel : reads board state
 
-SudokuGuiMain ..> Model : instantiate
-SudokuGuiMain ..> SudokuView : instantiate
-SudokuGuiMain ..> SudokuController : wire MVC
-SudokuCli --> Model : reuse same model
+SudokuGuiMain ..> "1" Model : instantiate concrete model
+SudokuGuiMain ..> "1" SudokuView : instantiate
+SudokuGuiMain ..> "1" SudokuController : wire MVC
+SudokuCli "1" --> "1" SudokuModel : reuse same model
 
 note right of SudokuController
   Controller contains no Swing rendering code.
@@ -182,7 +160,7 @@ end note
 
 note right of Model
   Model contains Sudoku rules, puzzle loading,
-  flags, undo, hint, and completion logic.
+  flags, undo, hint, completion, and asserts.
   It contains no GUI code.
 end note
 

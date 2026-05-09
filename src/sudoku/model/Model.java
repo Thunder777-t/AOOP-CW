@@ -13,76 +13,21 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 
-public class Model extends Observable {
-    public static final int SIZE = 9;
+import sudoku.model.SudokuModel.CellPosition;
+import sudoku.model.SudokuModel.ChangeType;
+import sudoku.model.SudokuModel.Hint;
+
+/*@
+  @ invariant puzzlePool != null;
+  @ invariant puzzlePool.isEmpty() <==>
+  @   (initialBoard == null && currentBoard == null && solvedBoard == null && fixedCells == null && lastMove == null);
+  @ invariant !puzzlePool.isEmpty() ==> (0 <= fixedPuzzleIndex && fixedPuzzleIndex < puzzlePool.size());
+  @ invariant fixedCells == null || fixedCells.length == SIZE;
+  @ invariant currentBoard == null || currentBoard.length == SIZE;
+  @*/
+public class Model extends Observable implements SudokuModel {
+    public static final int SIZE = SudokuModel.SIZE;
     private static final int BOX_SIZE = 3;
-
-    public enum ChangeType {
-        NEW_GAME,
-        RESET,
-        CELL_UPDATED,
-        UNDO,
-        FLAGS_UPDATED
-    }
-
-    public static final class CellPosition {
-        private final int row;
-        private final int col;
-
-        public CellPosition(int row, int col) {
-            this.row = row;
-            this.col = col;
-        }
-
-        public int getRow() {
-            return row;
-        }
-
-        public int getCol() {
-            return col;
-        }
-
-        @Override
-        public boolean equals(Object other) {
-            if (this == other) {
-                return true;
-            }
-            if (!(other instanceof CellPosition)) {
-                return false;
-            }
-            CellPosition that = (CellPosition) other;
-            return row == that.row && col == that.col;
-        }
-
-        @Override
-        public int hashCode() {
-            return 31 * row + col;
-        }
-    }
-
-    public static final class Hint {
-        private final int row;
-        private final int col;
-        private final int value;
-
-        public Hint(int row, int col, int value) {
-            this.row = row;
-            this.col = col;
-            this.value = value;
-        }
-
-        public int getRow() {
-            return row;
-        }
-
-        public int getCol() {
-            return col;
-        }
-
-        public int getValue() {
-            return value;
-        }
-    }
 
     private static final class Move {
         private final int row;
@@ -123,6 +68,12 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    /*@
+      @ requires puzzleFilePath != null;
+      @ ensures getPuzzleCount() > 0;
+      @ ensures 0 <= getFixedPuzzleIndex() && getFixedPuzzleIndex() < getPuzzleCount();
+      @*/
+    @Override
     public final void loadPuzzles(Path puzzleFilePath) throws IOException {
         assert puzzleFilePath != null : "Puzzle file path must not be null";
         assertModelInvariant();
@@ -150,6 +101,12 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    /*@
+      @ requires getPuzzleCount() > 0;
+      @ ensures hasUndoableAction() == false;
+      @ ensures getBoardCopy().length == SIZE;
+      @*/
+    @Override
     public void newGame() {
         assertModelInvariant();
         assert !puzzlePool.isEmpty() : "Puzzle pool must not be empty";
@@ -171,6 +128,13 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    /*@
+      @ requires getPuzzleCount() > 0;
+      @ ensures hasUndoableAction() == false;
+      @ ensures (\forall int r, c; 0 <= r && r < SIZE && 0 <= c && c < SIZE;
+      @            !isEditableCell(r, c) ==> getCellValue(r, c) == initialBoard[r][c]);
+      @*/
+    @Override
     public void reset() {
         assertModelInvariant();
         ensureGameLoaded();
@@ -180,6 +144,13 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    /*@
+      @ requires 0 <= row && row < SIZE && 0 <= col && col < SIZE;
+      @ requires 1 <= value && value <= 9;
+      @ ensures \result ==> getCellValue(row, col) == value;
+      @ ensures !\result ==> true;
+      @*/
+    @Override
     public boolean setCellValue(int row, int col, int value) {
         assertModelInvariant();
         assert row >= 0 && row < SIZE : "Row out of range";
@@ -200,6 +171,12 @@ public class Model extends Observable {
         return true;
     }
 
+    /*@
+      @ requires 0 <= row && row < SIZE && 0 <= col && col < SIZE;
+      @ ensures \result ==> getCellValue(row, col) == 0;
+      @ ensures !\result ==> true;
+      @*/
+    @Override
     public boolean clearCell(int row, int col) {
         assertModelInvariant();
         assert row >= 0 && row < SIZE : "Row out of range";
@@ -219,6 +196,11 @@ public class Model extends Observable {
         return true;
     }
 
+    /*@
+      @ ensures \result ==> hasUndoableAction() == false;
+      @ ensures !\result ==> true;
+      @*/
+    @Override
     public boolean undoLastAction() {
         assertModelInvariant();
         if (lastMove == null) {
@@ -231,6 +213,11 @@ public class Model extends Observable {
         return true;
     }
 
+    /*@
+      @ ensures !isHintEnabled() ==> \result == null;
+      @ ensures \result != null ==> getCellValue(\result.getRow(), \result.getCol()) == \result.getValue();
+      @*/
+    @Override
     public Hint requestHint() {
         assertModelInvariant();
         if (!hintEnabled) {
@@ -252,6 +239,12 @@ public class Model extends Observable {
         return null;
     }
 
+    /*@
+      @ ensures \result != null;
+      @ ensures (\forall CellPosition p; \result.contains(p);
+      @            0 <= p.getRow() && p.getRow() < SIZE && 0 <= p.getCol() && p.getCol() < SIZE);
+      @*/
+    @Override
     public List<CellPosition> getInvalidCells() {
         assertModelInvariant();
         ensureGameLoaded();
@@ -264,6 +257,12 @@ public class Model extends Observable {
         return result;
     }
 
+    /*@
+      @ ensures \result <==>
+      @   ((\forall int r, c; 0 <= r && r < SIZE && 0 <= c && c < SIZE; 1 <= getCellValue(r, c) && getCellValue(r, c) <= 9)
+      @    && getInvalidCells().isEmpty());
+      @*/
+    @Override
     public boolean isBoardCompleted() {
         assertModelInvariant();
         ensureGameLoaded();
@@ -294,6 +293,7 @@ public class Model extends Observable {
         return true;
     }
 
+    @Override
     public int getCellValue(int row, int col) {
         assertModelInvariant();
         ensureGameLoaded();
@@ -303,6 +303,7 @@ public class Model extends Observable {
         return currentBoard[row][col];
     }
 
+    @Override
     public boolean isEditableCell(int row, int col) {
         assertModelInvariant();
         ensureGameLoaded();
@@ -312,16 +313,19 @@ public class Model extends Observable {
         return !fixedCells[row][col];
     }
 
+    @Override
     public int[][] getBoardCopy() {
         assertModelInvariant();
         ensureGameLoaded();
         return deepCopy(currentBoard);
     }
 
+    @Override
     public boolean isValidationFeedbackEnabled() {
         return validationFeedbackEnabled;
     }
 
+    @Override
     public void setValidationFeedbackEnabled(boolean validationFeedbackEnabled) {
         assertModelInvariant();
         this.validationFeedbackEnabled = validationFeedbackEnabled;
@@ -329,10 +333,12 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    @Override
     public boolean isHintEnabled() {
         return hintEnabled;
     }
 
+    @Override
     public void setHintEnabled(boolean hintEnabled) {
         assertModelInvariant();
         this.hintEnabled = hintEnabled;
@@ -340,10 +346,12 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    @Override
     public boolean isRandomPuzzleSelectionEnabled() {
         return randomPuzzleSelectionEnabled;
     }
 
+    @Override
     public void setRandomPuzzleSelectionEnabled(boolean randomPuzzleSelectionEnabled) {
         assertModelInvariant();
         this.randomPuzzleSelectionEnabled = randomPuzzleSelectionEnabled;
@@ -351,10 +359,12 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    @Override
     public int getFixedPuzzleIndex() {
         return fixedPuzzleIndex;
     }
 
+    @Override
     public void setFixedPuzzleIndex(int fixedPuzzleIndex) {
         assertModelInvariant();
         if (fixedPuzzleIndex < 0 || fixedPuzzleIndex >= puzzlePool.size()) {
@@ -366,14 +376,17 @@ public class Model extends Observable {
         assertModelInvariant();
     }
 
+    @Override
     public int getPuzzleCount() {
         return puzzlePool.size();
     }
 
+    @Override
     public boolean hasUndoableAction() {
         return lastMove != null;
     }
 
+    @Override
     public boolean hasEditableEmptyCell() {
         assertModelInvariant();
         ensureGameLoaded();

@@ -1,6 +1,7 @@
 package sudoku.gui;
 
 import sudoku.model.Model;
+import sudoku.model.SudokuModel;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
@@ -19,7 +20,7 @@ public final class SudokuGuiMain {
 
     private static void launchGui(Path puzzlePath) {
         try {
-            Model model = new Model(puzzlePath);
+            SudokuModel model = new Model(puzzlePath);
             SudokuView view = new SudokuView(model);
             SudokuController controller = new SudokuController(model, view);
             view.setController(controller);

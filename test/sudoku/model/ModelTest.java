@@ -9,6 +9,9 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
+import sudoku.model.SudokuModel.CellPosition;
+import sudoku.model.SudokuModel.Hint;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,10 +41,10 @@ class ModelTest {
         Model model = createModel(PUZZLE_A);
 
         assertTrue(model.setCellValue(0, 1, 7), "Model accepts temporary invalid states by design");
-        List<Model.CellPosition> invalid = model.getInvalidCells();
+        List<CellPosition> invalid = model.getInvalidCells();
 
-        assertTrue(invalid.contains(new Model.CellPosition(0, 0)));
-        assertTrue(invalid.contains(new Model.CellPosition(0, 1)));
+        assertTrue(invalid.contains(new CellPosition(0, 0)));
+        assertTrue(invalid.contains(new CellPosition(0, 1)));
         assertFalse(model.isBoardCompleted(), "Board with duplicates cannot be complete");
     }
 
@@ -57,7 +60,7 @@ class ModelTest {
         assertNull(model.requestHint(), "Hint disabled should return null");
 
         model.setHintEnabled(true);
-        Model.Hint hint = model.requestHint();
+        Hint hint = model.requestHint();
         assertNotNull(hint);
         assertEquals(8, hint.getRow());
         assertEquals(8, hint.getCol());
