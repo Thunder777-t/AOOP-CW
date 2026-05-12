@@ -54,26 +54,4 @@ java -cp out sudoku.gui.SudokuGuiMain puzzles.txt
 - `help`
 - `exit`
 
-## Run JUnit Tests
 
-1. Download JUnit Console Standalone JAR (example):
-```powershell
-Invoke-WebRequest `
-  -Uri "https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.11.4/junit-platform-console-standalone-1.11.4.jar" `
-  -OutFile "$env:TEMP/junit-platform-console-standalone-1.11.4.jar"
-```
-
-2. Compile tests:
-```powershell
-javac -encoding UTF-8 `
-  -cp "out;$env:TEMP/junit-platform-console-standalone-1.11.4.jar" `
-  -d out-test `
-  test/sudoku/model/ModelTest.java
-```
-
-3. Execute tests:
-```powershell
-java -jar "$env:TEMP/junit-platform-console-standalone-1.11.4.jar" `
-  --class-path "out;out-test" `
-  --scan-class-path
-```
