@@ -12,7 +12,6 @@ This project implements two Java versions of Sudoku that share the same `Model`:
 - `src/sudoku/gui/*`: GUI `View` + `Controller` + `Main`.
 - `src/sudoku/cli/SudokuCli.java`: command-line program using the same model.
 - `test/sudoku/model/ModelTest.java`: three JUnit scenarios focused on the model.
-- `docs/class-diagram.puml`: class diagram source (PlantUML).
 - `puzzles.txt`: puzzle source file.
 
 ## Compile
